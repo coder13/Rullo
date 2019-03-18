@@ -7,6 +7,34 @@
 <script>
 const { generateBoard, generateSolution } = require('../lib/rullo');
 
+const lightenDarkenColor = function (col, amt) {
+  let usePound = false;
+
+  if (col[0] == "#") {
+      col = col.slice(1);
+      usePound = true;
+  }
+
+  let num = parseInt(col, 16);
+  let r = (num >> 16) + amt;
+
+  if (r > 255) r = 255;
+  else if  (r < 0) r = 0;
+
+  let b = ((num >> 8) & 0x00FF) + amt;
+
+  if (b > 255) b = 255;
+  else if  (b < 0) b = 0;
+
+  let g = (num & 0x0000FF) + amt;
+
+  if (g > 255) g = 255;
+  else if (g < 0) g = 0;
+
+  return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16);
+}
+const sum = (a,b) => a + b;
+
 export default {
   name: 'app',
   data () {
@@ -24,7 +52,11 @@ export default {
       hover: {
         x: undefined,
         y: undefined
-      }
+      },
+      rowTargetSums: [],
+      rowCurrentSums: [],
+      columnTargetSums: [],
+      columnCurrentSums: [],
     };
   },
 
@@ -43,26 +75,26 @@ export default {
     this.board = generateBoard(this.width, this.height);
     this.solution = generateSolution(this.width, this.height);
 
-    this.current = Array.from({length: this.height}).map(i => Array.from({length: this.width}).fill(true));
-    this.locked = Array.from({length: this.height}).map(i => Array.from({length: this.width}).fill(false));
+    this.current = Array.from({length: this.height}).map(() => Array.from({length: this.width}).fill(true));
+    this.locked = Array.from({length: this.height}).map(() => Array.from({length: this.width}).fill(false));
     this.renderGrid();
   },
 
   methods: {
+    calcSums () {
+      this.rowTargetSums = this.board.map((r,y) => r.map((i,x) => this.solution[y][x] ? i : 0).reduce(sum));
+      this.rowCurrentSums = this.board.map((r,y) => r.map((i,x) => this.current[y][x] ? i : 0).reduce(sum))
+
+      this.columnTargetSums = this.board[0].map((c,x) => this.board.map((r,y) => this.solution[y][x] ? r[x] : 0).reduce(sum));
+      this.columnCurrentSums = this.board[0].map((c,x) => this.board.map((r,y) => this.current[y][x] ? r[x] : 0).reduce(sum));
+    },
+
     renderGrid () {
+      this.calcSums();
+
       let context = this.provider.context;
       let size = this.size = context.canvas.clientWidth / (this.width + 2);
       context.clearRect(0, 0, context.canvas.clientWidth, context.canvas.clientHeight);
-
-      const sum = (a,b) => a+b;
-
-      let rowTargetSums = this.board.map((r,y) => r.map((i,x) => this.solution[y][x] ? i : 0).reduce(sum));
-      let rowCurrentSums = this.board.map((r,y) => r.map((i,x) => this.current[y][x] ? i : 0).reduce(sum))
-      //let rowCurrentSums = this.board.map(r => r.reduce(sum));
-
-      let columnTargetSums = this.board[0].map((c,x) => this.board.map((r,y) => this.solution[y][x] ? r[x] : 0).reduce(sum));
-      let columnCurrentSums = this.board[0].map((c,x) => this.board.map((r,y) => this.current[y][x] ? r[x] : 0).reduce(sum));
-      // let columnCurrentSums = this.board[0].map((c,x) => this.board.map(r => r[x]).reduce(sum));
 
       context.textBaseline = 'middle';
 
@@ -121,12 +153,12 @@ export default {
         }]);
 
         context.fillStyle = 'white';
-        context.fillText(columnTargetSums[x], size + size * x + size / 4, size / 4, size / 4, size / 4);
-        context.fillText(columnCurrentSums[x], size + size * x + size * 3 / 4, size * 3 / 4, size / 4, size / 4);
+        context.fillText(this.columnTargetSums[x], size + size * x + size / 4, size / 4, size / 4, size / 4);
+        context.fillText(this.columnCurrentSums[x], size + size * x + size * 3 / 4, size * 3 / 4, size / 4, size / 4);
 
         context.fillStyle = 'white';
-        context.fillText(columnTargetSums[x], size + size * x + size / 4, size * (this.width  + 1) + size / 4, size / 4, size / 4);
-        context.fillText(columnCurrentSums[x], size + size * x + size * 3 / 4, size * (this.width  + 1) + size * 3 / 4, size / 4, size / 4);
+        context.fillText(this.columnTargetSums[x], size + size * x + size / 4, size * (this.width  + 1) + size / 4, size / 4, size / 4);
+        context.fillText(this.columnCurrentSums[x], size + size * x + size * 3 / 4, size * (this.width  + 1) + size * 3 / 4, size / 4, size / 4);
       }
 
       // rowSums
@@ -181,31 +213,53 @@ export default {
         }]);
 
         context.fillStyle = 'white';
-        context.fillText(rowTargetSums[y], size / 4, size + size * y + size / 4, size / 4, size / 4);
-        context.fillText(rowCurrentSums[y], size * 3 / 4, size + size * y + size * 3 / 4, size / 4, size / 4);
+        context.fillText(this.rowTargetSums[y], size / 4, size + size * y + size / 4, size / 4, size / 4);
+        context.fillText(this.rowCurrentSums[y], size * 3 / 4, size + size * y + size * 3 / 4, size / 4, size / 4);
 
         context.fillStyle = 'white';
-        context.fillText(rowTargetSums[y], size * (this.width  + 1) + size / 4, size + size * y + size / 4, size / 4, size / 4);
-        context.fillText(rowCurrentSums[y], size * (this.width  + 1) + size * 3 / 4, size + size * y + size * 3 / 4, size / 4, size / 4);
+        context.fillText(this.rowTargetSums[y], size * (this.width  + 1) + size / 4, size + size * y + size / 4, size / 4, size / 4);
+        context.fillText(this.rowCurrentSums[y], size * (this.width  + 1) + size * 3 / 4, size + size * y + size * 3 / 4, size / 4, size / 4);
+      }
+
+      for (let x = 0; x < this.width; x++) {
+        if (this.columnTargetSums[x] === this.columnCurrentSums[x]) {
+          context.strokeStyle = '#fbe79e';
+          context.strokeRect(size + size * x, 0, size, size);
+          context.strokeRect(size + size * x, size * (this.width + 1), size, size);
+        }
+      }
+
+      for (let y = 0; y < this.height; y++) {
+        if (this.rowTargetSums[y] === this.rowCurrentSums[y]) {
+          context.strokeStyle = '#fbe79e';
+          context.strokeRect(0, size + size * y, size, size);
+          context.strokeRect(size * (this.height + 1), size + size * y, size, size);
+        }
       }
 
       context.lineWidth = 4;
-      let w = 4;
+      //let w = 4;
       context.font = `${size / 2}px Roboto`
       for (let y = 0; y < this.height; y++) {
         for (let x = 0; x < this.width; x++) {
-          context.fillStyle = this.current[y][x] && !(this.hover.x === x && this.hover.y === y) ? '#df144c' : '#404350'; // red rect
-          context.fillRect(size + x*size + w, size + y*size + w, size - w*2, size - w*2);
-
+          let border = false;
+          // context.fillStyle = this.current[y][x] && !(this.hover.x === x && this.hover.y === y) ? '#df144c' : '#404350'; // red rect
+          context.fillStyle = this.current[y][x] ? '#df144c' : '#404350';
           if (this.locked[y][x]) {
-            context.strokeStyle = 'yellow'; // grey border
+            border = true;
+            context.strokeStyle = this.current[y][x] ? '#fbe79e' : lightenDarkenColor('#fbe79e', -100); // gold border
           } else if (this.hover.x === x && this.hover.y === y) {
-            context.strokeStyle = 'red'; // grey border
-          } else {
-            context.strokeStyle = '#404350';
+            border = true;
+            context.fillStyle = lightenDarkenColor(context.fillStyle, -20);
+            context.strokeStyle = lightenDarkenColor('#404350', -20); // grey border
           }
 
-          context.strokeRect(size + x*size + w, size + y*size + w, size - w*2, size - w*2);
+          context.beginPath();
+          context.arc(size + x*size + (size / 2), size + y*size + (size / 2), size/2.8, 0, 360);
+          context.fill();
+          if (border) context.stroke();
+          //context.fillRect(size + x*size + w, size + y*size + w, size - w*2, size - w*2);
+          //if (border) context.strokeRect(size + x*size + w, size + y*size + w, size - w*2, size - w*2);
           context.fillStyle = '#fff'
           context.fillText(this.board[y][x], size + x*size + (size / 2), size + y*size + (size / 2), size, size);
         }
@@ -214,7 +268,6 @@ export default {
 
     onMouseMove (e) {
       let context = this.provider.context;
-      let size = this.size;
       let x = Math.floor((e.clientX - context.canvas.offsetLeft) / this.size) - 1;
       let y = Math.floor((e.clientY - context.canvas.offsetTop) / this.size) - 1;
       this.hover = {x, y};
@@ -249,20 +302,47 @@ export default {
     },
 
     onClick (e) {
+      this.calcSums();
+
       let context = this.provider.context;
-      let size = this.size;
       let x = Math.floor((e.clientX - context.canvas.offsetLeft) / this.size) - 1;
       let y = Math.floor((e.clientY - context.canvas.offsetTop) / this.size) - 1;
 
-      if (x < 0 || y < 0) {
-        return;
+      // columns
+      if (this.shift) {
+        if ((y < 0 || y === this.height) && (x > 0 || x <= this.width) && this.columnTargetSums[x] === this.columnCurrentSums[x]) {
+          if (this.locked.map(i => i[x]).reduce(sum) < this.height) {
+            for (let i = 0; i < this.height; i++) {
+              this.locked[i][x] = 1;
+            }
+          } else {
+            for (let i = 0; i < this.height; i++) {
+              this.locked[i][x] = 0;
+            }
+          }
+        }
+
+        if ((x < 0 || x === this.width) && (y > 0 || y <= this.height) && this.rowTargetSums[y] === this.rowCurrentSums[y]) {
+          if (this.locked[y].reduce(sum) < this.width) {
+            for (let i = 0; i < this.width; i++) {
+              this.locked[y][i] = 1;
+            }
+          } else {
+            for (let i = 0; i < this.height; i++) {
+              this.locked[y][i] = 0;
+            }
+          }
+        }
       }
 
-      if (this.shift) {
-        this.locked[y][x] = !this.locked[y][x];
-      } else if (!this.locked[y][x]) {
-        this.current[y][x] = !this.current[y][x];
+      if (x > -1 && y > -1 && x < this.width && y < this.height) {
+        if (this.shift) {
+          this.locked[y][x] = !this.locked[y][x];
+        } else if (!this.locked[y][x]) {
+          this.current[y][x] = !this.current[y][x];
+        }
       }
+
       this.renderGrid();
     }
   }
