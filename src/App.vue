@@ -1,11 +1,27 @@
 <template>
   <main id="app">
+    <h1>Rullo</h1>
+    <div style="display: flex; align-items: flex-end; height: 72px;">
+      <div style="flex-grow: 1; margin-bottom: 16px;">
+        <div id="eventSelector">
+          <select v-model="curEvent" @change="scramble">
+            <option>1-9</option>
+            <option>1-19</option>
+            <option>2-4</option>
+            <option>custom</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin: 0px 0px 12px; display: flex;">
+      <button @click="scramble">Scramble</button></div>
+    </div>
     <canvas ref="canvas" id="canvas" v-on:click="onClick" width="640" height="640"></canvas>
+    <hr>
   </main>
 </template>
 
 <script>
-const { generateBoard, generateSolution } = require('../lib/rullo');
+const { generateBoard, generateSolution, Events } = require('../lib/rullo');
 
 const lightenDarkenColor = function (col, amt) {
   let usePound = false;
@@ -42,8 +58,9 @@ export default {
       provider: {
         context: null
       },
-      width: 5,
-      height: 5,
+      curEvent: '1-9',
+      width: 6,
+      height: 6,
       board: [],
       solution: [],
       current: [],
@@ -72,15 +89,19 @@ export default {
     window.addEventListener('keydown', this.onKeyDown.bind(this));
     window.addEventListener('keyup', this.onKeyUp.bind(this));
 
-    this.board = generateBoard(this.width, this.height);
-    this.solution = generateSolution(this.width, this.height);
-
-    this.current = Array.from({length: this.height}).map(() => Array.from({length: this.width}).fill(true));
-    this.locked = Array.from({length: this.height}).map(() => Array.from({length: this.width}).fill(false));
-    this.renderGrid();
+    this.scramble();
   },
 
   methods: {
+    scramble () {
+      this.board = generateBoard(this.width, this.height, Events[this.curEvent]);
+      this.solution = generateSolution(this.width, this.height);
+      this.current = Array.from({length: this.height}).map(() => Array.from({length: this.width}).fill(true));
+      this.locked = Array.from({length: this.height}).map(() => Array.from({length: this.width}).fill(false));
+
+      this.renderGrid();
+    },
+
     calcSums () {
       this.rowTargetSums = this.board.map((r,y) => r.map((i,x) => this.solution[y][x] ? i : 0).reduce(sum));
       this.rowCurrentSums = this.board.map((r,y) => r.map((i,x) => this.current[y][x] ? i : 0).reduce(sum))
@@ -129,7 +150,7 @@ export default {
           y: size * (this.width + 2)
         }], true);
 
-        context.fillStyle = '#404350'; // grey triangle
+        context.fillStyle = '#40435000'; // grey triangle
         drawTriangle(context, [{
           x: size + (x + 1) * size,
           y: 0
@@ -139,7 +160,7 @@ export default {
         }, {
           x: size + x * size,
           y: size
-        }]);
+        }], true);
 
         drawTriangle(context, [{
           x: size + (x + 1) * size,
@@ -150,7 +171,7 @@ export default {
         }, {
           x: size + x * size,
           y: size * (this.width + 2)
-        }]);
+        }], true);
 
         context.fillStyle = 'white';
         context.fillText(this.columnTargetSums[x], size + size * x + size / 4, size / 4, size / 4, size / 4);
@@ -189,7 +210,7 @@ export default {
           y: size + y * size
         }], true);
 
-        context.fillStyle = '#404350'; // grey triangle
+        context.fillStyle = '#40435000'; // grey triangle
         drawTriangle(context, [{
           x: 0,
           y: size + (y + 1) * size
@@ -199,7 +220,7 @@ export default {
         }, {
           x: size,
           y: size + y * size
-        }]);
+        }], true);
 
         drawTriangle(context, [{
           x: size * (this.width + 1),
@@ -210,7 +231,7 @@ export default {
         }, {
           x: size * (this.width + 2),
           y: size + y * size
-        }]);
+        }], true);
 
         context.fillStyle = 'white';
         context.fillText(this.rowTargetSums[y], size / 4, size + size * y + size / 4, size / 4, size / 4);
@@ -260,7 +281,7 @@ export default {
           if (border) context.stroke();
           //context.fillRect(size + x*size + w, size + y*size + w, size - w*2, size - w*2);
           //if (border) context.strokeRect(size + x*size + w, size + y*size + w, size - w*2, size - w*2);
-          context.fillStyle = '#fff'
+          context.fillStyle = this.current[y][x] ? '#fff' : lightenDarkenColor('#ffffff', -120);
           context.fillText(this.board[y][x], size + x*size + (size / 2), size + y*size + (size / 2), size, size);
         }
       }
@@ -365,23 +386,3 @@ function drawTriangle(context, points, border) {
   }
 }
 </script>
-
-<style>
-@import url('https://fonts.googleapis.com/css?family=Roboto:400,500,700,900');
-
-:root {
-  background: #171a29;
-  color: rgba(10, 5, 0, 0.75);
-  shade: rgba(0, 0, 0, 0.12);
-  shade-light: rgba(0, 0, 0, 0.05);
-}
-
-#app {
-  margin: 32px auto 64px;
-  max-width: 640px;
-}
-
-#canvas {
-  width: 100%;
-}
-</style>
