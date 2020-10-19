@@ -58,7 +58,12 @@ hr {
   width: 100%;
   border-radius: 6px;
   background: var(--shade);
-  filter: brightness(1.06)
+  filter: brightness(1.06);
+  transition: 1s;
+}
+
+#canvas.solved {
+  filter: brightness(0.75);
 }
 
 :root.dark #canvas {
@@ -141,4 +146,34 @@ select:after {
   height: 0;
   border: 6px solid transparent;
   border-color: #fff transparent transparent transparent;
+}
+
+div#sizeSelector {
+  width: 100px;
+  display: flex;
+}
+
+input.sizeInput {
+  all: unset;
+  width: 50px;
+  height: 36px;
+  padding: 0 8px;
+  margin: 0px 8px;
+  align-items: center;
+  font-weight: 500;
+  cursor: pointer;
+  text-transform: uppercase;
+  user-select: none;
+  transition: background 150ms;
+
+  box-sizing: border-box;
+  color: var(--color);
+  background-color: var(--shade);
+  border-radius: 4px;
+  border-width: 1px;
+  border-image: initial;
+}
+
+input[type=number]::-webkit-inner-spin-button {
+  opacity: 1;
 }
